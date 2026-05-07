@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SUPER: Simulasi Pemecahan Uang Rupiah</title>
+    <style>
+        /* Mengimpor font ceria */
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@600;800&display=swap');
+        
+        body { 
+            font-family: 'Nunito', sans-serif; 
+            margin: 0;
+            padding: 0; 
+            height: 100vh;
+            overflow: hidden; 
+            display: flex;
+            box-sizing: border-box;
+            
+            /* --- PENGATURAN BACKGROUND GAMBAR --- */
+            background-color: #8ec5fc; 
+            background-image: url('https://github.com/gunjackwr/mediauang/raw/main/bg-toko.png'); 
+            background-size: cover; 
+            background-position: center; 
+            background-repeat: no-repeat; 
+        }
+        
+        .app-layout {
+            display: flex;
+            width: 100%; 
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        /* --- PANEL KIRI (GURU & SCAFFOLDING) --- */
+        .sidebar {
+            flex: 0 0 28%; 
+            /* Blur dihilangkan dan transparansi diturunkan agar sangat jelas */
+            background: rgba(255, 255, 255, 0.05); 
+            backdrop-filter: none; 
+            border-radius: 0; 
+            border-right: 2px solid rgba(255, 255, 255, 0.4); 
+            /* Padding bawah diubah menjadi 0 agar gambar guru tidak menggantung */
+            padding: 30px 30px 0 30px; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .speech-bubble {
+            background: #ffea00;
+            padding: 20px;
+            border-radius: 15px;
+            font-weight: 800;
+            color: #2f3542;
+            text-align: center;
+            font-size: 1.1em;
+            line-height: 1.5;
+            position: relative;
+            margin-bottom: 25px;
+            width: 100%;
+            box-sizing: border-box;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 15px 15px 0;
+            border-style: solid;
+            border-color: #ffea00 transparent transparent transparent;
+        }
+
+        .teacher-img {
+            width: 100%; /* Diperbesar dari 90% menjadi 100% dari ruang yang tersedia */
+            max-width: 350px; /* Batas maksimal diperbesar dari 250px ke 350px */
+            margin-top: auto; 
+            margin-bottom: 0; /* Menempel di dasar layar */
+            display: block;
+            object-fit: contain; 
+            transition: opacity 0.2s ease-in-out;
+            filter: drop-shadow(0 10px 10px rgba(0,0,0,0.2)); 
+        }
+
+        /* --- PANEL KANAN (AREA KERJA) --- */
+        .main-board {
+            flex: 1; 
+            /* EFEK KACA DENGAN TRANSPARANSI YANG PAS UNTUK MEMBACA */
+            background: rgba(255, 255, 255, 0.65); 
+            backdrop-filter: blur(6px);
+            border-radius: 0; 
+            padding: 20px 40px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px dashed rgba(255, 255, 255, 0.8);
+        }
+
+        h2 { 
+            font-family: 'Fredoka One', cursive; 
+            color: #5f27cd; 
+            margin: 0; 
+            font-size: 1.8em; 
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-shadow: 1px 1px 0px rgba(255,255,255,0.8);
+        }
+
+        .btn-petunjuk {
+            background-color: #f39c12;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-family: 'Fredoka One', cursive;
+            font-size: 1.1em;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #e67e22;
+        }
+        .btn-petunjuk:active { transform: translateY(5px); box-shadow: 0 0 0 #e67e22; }
+
+        .content-split { display: flex; gap: 30px; flex: 1; min-height: 0; }
+        .left-panel, .right-panel { flex: 1; display: flex; flex-direction: column; gap: 15px; }
+
+        /* KONTEN KOLOM KIRI (SOAL & UANG) */
+        .kasus { background-color: rgba(246, 229, 141, 0.85); padding: 15px; border-radius: 15px; text-align: left; font-size: 1.05em; color: #2f3542; margin: 0; line-height: 1.4; border: 2px solid #f1c40f;}
+        .uang-container { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; align-content: flex-start; padding: 15px; background: rgba(255, 255, 255, 0.5); border-radius: 15px; flex: 1; border: 1px solid rgba(255,255,255,0.5); }
+        .uang-item { cursor: grab; transition: transform 0.2s; user-select: none; display: inline-block; }
+        .uang-item:active { cursor: grabbing; transform: scale(1.15); }
+        .uang-item img { pointer-events: none; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+        .uang-kertas img { width: 95px; height: auto; border-radius: 5px; }
+        .uang-koin img { width: 45px; height: auto; border-radius: 50%; }
+        
+        /* KONTEN KOLOM KANAN (DROPZONE & FORM) */
+        .area-pilihan { background: rgba(255, 255, 255, 0.5); padding: 20px; border-radius: 15px; text-align: center; border: 4px dashed #a4b0be; transition: background 0.3s, border-color 0.3s; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        .area-pilihan.drag-over { background: rgba(223, 228, 234, 0.9); border-color: #5352ed; }
+        .total-teks { font-family: 'Fredoka One', cursive; font-size: 1.6em; color: #2ed573; margin: 10px 0; transition: transform 0.2s; text-shadow: 1px 1px 0px rgba(0,0,0,0.1); }
+        .animasi-pop { animation: pop 0.4s ease-out; }
+        @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.3); color: #ff4757; } 100% { transform: scale(1); } }
+        
+        .form-group { margin: 0; }
+        label { font-weight: 800; display: block; margin-bottom: 5px; color: #2f3542; font-size: 0.9em; }
+        input[type="text"], textarea { width: 100%; padding: 12px; border: 2px solid #dfe4ea; border-radius: 10px; box-sizing: border-box; font-family: 'Nunito', sans-serif; font-size: 1em; background-color: rgba(255,255,255,0.9); }
+        input[type="text"]:focus, textarea:focus { outline: none; border-color: #5f27cd; background-color: #fff; }
+        
+        .btn-kirim { font-family: 'Fredoka One', cursive; width: 100%; padding: 15px; background-color: #5352ed; color: white; border: none; border-radius: 15px; font-size: 1.2em; cursor: pointer; box-shadow: 0 5px 0 #3742fa; margin-top: 5px; }
+        .btn-kirim:active { transform: translateY(5px); box-shadow: 0 0 0 #3742fa; }
+        .btn-reset { padding: 8px 15px; cursor: pointer; border-radius: 8px; border: none; background-color: #ff6b81; color: white; font-weight: bold; margin-top: 10px; }
+
+        /* Modal Overlay */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 100; justify-content: center; align-items: center; backdrop-filter: blur(3px); }
+        .modal-content { background: white; padding: 30px; border-radius: 20px; max-width: 450px; text-align: center; animation: popModal 0.3s ease-out; border: 5px solid #f39c12; }
+        .modal-content h3 { font-family: 'Fredoka One', cursive; color: #f39c12; margin-top: 0; font-size: 1.8em; }
+        .modal-content ol { text-align: left; font-size: 1.1em; line-height: 1.6; color: #2f3542; }
+        .btn-tutup { padding: 12px 25px; background-color: #2ed573; color: white; border: none; border-radius: 12px; font-family: 'Fredoka One', cursive; font-size: 1.1em; cursor: pointer; box-shadow: 0 5px 0 #2bad5b; }
+        .btn-tutup:active { transform: translateY(5px); box-shadow: 0 0 0 #2bad5b; }
+    </style>
+</head>
+<body>
+
+<div id="modalPetunjuk" class="modal-overlay">
+    <div class="modal-content">
+        <h3>📖 Petunjuk Belajar</h3>
+        <ol>
+            <li>Dengarkan arahan dari Bapak Guru di sebelah kiri.</li>
+            <li>Ada <strong>5 Misi HOTS</strong> soal cerita yang harus diselesaikan.</li>
+            <li><strong>Tarik (Drag)</strong> gambar uang dari sebelah kiri.</li>
+            <li><strong>Lepaskan (Drop)</strong> di dalam kotak putus-putus.</li>
+            <li>Pastikan total uang yang kamu tarik sesuai dengan jawaban soal!</li>
+            <li>Ketik namamu dan jelaskan caramu menghitung untuk lanjut ke level berikutnya.</li>
+        </ol>
+        <button class="btn-tutup" onclick="tutupPetunjuk()">Paham, ayo mulai!</button>
+    </div>
+</div>
+
+<div class="app-layout">
+    
+    <div class="sidebar">
+        <div class="speech-bubble" id="teksGuru">
+            Halo! Mari berlatih memecahkan masalah uang. Ada 5 misi HOTS hari ini, klik tombol 'Petunjuk Belajar' di pojok kanan atas untuk memulai ya!
+        </div>
+        
+        <img src="https://raw.githubusercontent.com/gunjackwr/mediauang/main/awal.png" id="imgGuru" alt="Ilustrasi Guru" class="teacher-img">
+    </div>
+
+    <div class="main-board">
+        <div class="header-area">
+            <h2>🦸‍♂️ SUPER <span style="font-size: 0.55em; color: #747d8c; margin-left: 10px; font-family: 'Nunito', sans-serif;">(Simulasi Pemecahan Uang Rupiah)</span></h2>
+            <button class="btn-petunjuk" onclick="tampilkanPetunjuk()">📖 Petunjuk Belajar</button>
+        </div>
+
+        <div class="content-split" id="areaKontenUtama">
+            <div class="left-panel">
+                <div class="kasus">
+                    <strong style="font-size: 1.2em; color: #e15f41;">Misi <span id="nomorMisi">1</span> dari 5:</strong><br> 
+                    <span id="teksSoal">Klik tombol <strong>📖 Petunjuk Belajar</strong> terlebih dahulu untuk memunculkan soal.</span><br>
+                    <em id="teksInstruksi" style="font-size: 0.85em; color: #57606f; display: block; margin-top: 8px;"></em>
+                </div>
+
+                <div class="uang-container">
+                    <div class="uang-item uang-kertas" draggable="true" ondragstart="mulaiTarik(event)" data-nilai="100000"><img src="https://raw.githubusercontent.com/gunjackwr/mediauang/main/100000.png" alt="100 Ribu"></div>
+                    <div class="uang-item uang-kertas" draggable="true" ondragstart="mulaiTarik(event)" data-nilai="75000"><img src="https://raw.githubusercontent.com/gunjackwr/mediauang/main/75000.png" alt="75 Ribu"></div>
+                    <div class="uang-item uang-kertas" draggable="true" ondragstart="mulaiTarik(event)" data-nilai="50000"><img src="https://raw.githubusercontent.com/gunjackwr/mediauang/main/50000.png" alt="50 Ribu"></div>
+                    <div class="uang-item uang-kertas" draggable="true" ondragstart="mulaiTarik(event)" data-nilai="20000"><img src="https://raw.githubusercontent.com/gunjackwr/mediauang/main/20000.png" alt="20 Ribu"></div>
+                    <div class="uang-item uang-kertas" draggable="true" ondragstart="mulaiTarik(event)" data-nilai="10000"><img src="https://raw.githubusercontent.com/gunjackwr/mediauang/main/10000.png" alt="10 Ribu"></div>
+                    <div class="uang-item uang-kertas" draggable="true" ondragstart="mulaiTarik(event)" data-nilai="5000"><img src="https://raw.githubusercontent.com/gunjackwr/mediauang/main/5000.png" alt="5 Ribu"></div>
+                    <div class="uang-item uang-kertas" draggable="true" ondragstart="mulaiTarik(event)" data-nilai="2000"><img src="https://raw.githubusercontent.com/gunjackwr/mediauang/main/2000.png" alt="2 Ribu"></div>
+                    <div class="uang-item uang-kertas" draggable="true" ondragstart="mulaiTarik(event)" data-nilai="1000"><img src="https://raw.githubusercontent.com/gunjackwr/mediauang/main/1000.png" alt="1 Ribu Kertas"></div>
+                    
+                    <div class="uang-item uang-koin" draggable="true" ondragstart="mulaiTarik(event)" data-nilai="1000"><img src="https://raw.githubusercontent.com/gunjackwr/mediauang/main/1000c.png" alt="1 Ribu Koin"></div>
+                    <div class="uang-item uang-koin" draggable="true" ondragstart="mulaiTarik(event)" data-nilai="500"><img src="https://raw.githubusercontent.com/gunjackwr/mediauang/main/500.png" alt="500 Rupiah"></div>
+                    <div class="uang-item uang-koin" draggable="true" ondragstart="mulaiTarik(event)" data-nilai="200"><img src="https://raw.githubusercontent.com/gunjackwr/mediauang/main/200.png" alt="200 Rupiah"></div>
+                    <div class="uang-item uang-koin" draggable="true" ondragstart="mulaiTarik(event)" data-nilai="100"><img src="https://raw.githubusercontent.com/gunjackwr/mediauang/main/100.png" alt="100 Rupiah"></div>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="area-pilihan" id="areaDrop" ondragover="izinkanDrop(event)" ondragleave="keluarDropTarget(event)" ondrop="lepasUang(event)">
+                    <p style="margin: 0 0 5px 0; color: #747d8c; font-weight: bold; font-size: 0.9em;">👇 Tarik Uang ke Sini 👇</p>
+                    <div id="rincianUang" style="font-size: 1.1em; color: #2f3542; font-weight: 800;">Belum ada uang</div>
+                    <p class="total-teks" id="teksTotalTampil">Total: Rp <span id="totalUang">0</span></p>
+                    <div><button class="btn-reset" onclick="resetUang()">🔄 Kosongkan</button></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="nama">Nama Siswa:</label>
+                    <input type="text" id="nama" placeholder="Ketik namamu...">
+                </div>
+                <div class="form-group">
+                    <label for="alasan">Caramu Menghitung (Alasan):</label>
+                    <textarea id="alasan" rows="2" placeholder="Ceritakan langkah-langkahmu menemukan jawabannya..."></textarea>
+                </div>
+
+                <button class="btn-kirim" id="btnKirim" onclick="kirimData()">🚀 Kirim Jawabanku!</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- DATABASE GAMBAR GURU ---
+    const imgAwal = "https://raw.githubusercontent.com/gunjackwr/mediauang/main/awal.png";
+    const imgBicara = "https://raw.githubusercontent.com/gunjackwr/mediauang/main/bicara.png";
+    const imgBenar = "https://raw.githubusercontent.com/gunjackwr/mediauang/main/benar.png";
+    const imgSalah = "https://raw.githubusercontent.com/gunjackwr/mediauang/main/salah.png";
+
+    // --- DATABASE 5 SOAL HOTS KELAS 5 ---
+    const daftarSoal = [
+        {
+            misi: 1,
+            teks: "Siti memiliki selembar uang <strong>Rp 50.000</strong>. Ia membeli <strong>2 buku tulis</strong> (harga Rp 12.000/buku) dan <strong>1 pulpen</strong> (harga Rp 5.000). Siti lalu memasukkan <strong>Rp 10.000</strong> dari kembaliannya ke dalam kotak amal. Berapa sisa uang Siti sekarang?",
+            instruksi: "Tarik (drag) pecahan uang yang senilai dengan sisa uang Siti ke kotak kanan!",
+            target: 11000,
+            audioAwal: "Misi pertama. Coba analisis langkahnya: hitung dulu total belanjaan Siti, kurangi dari uang lima puluh ribu, lalu ingat Siti menyumbang sepuluh ribu.",
+            audioLebih: "Sepertinya uang yang kamu tarik kelebihan. Coba cek lagi, apakah kamu sudah menghitung harga DUA buku tulis dan menguranginya dengan uang amal?",
+            audioKurang: "Langkahmu sudah bagus, tapi masih kurang. Ingat, ada harga buku, pulpen, dan uang yang disumbangkan. Coba analisis sekali lagi.",
+            audioBerhasil: "Luar biasa! Analisismu tepat, sisa uang Siti adalah 11 ribu. Ayo tuliskan langkah pemecahanmu dan klik kirim."
+        },
+        {
+            misi: 2,
+            teks: "Budi ingin membeli tas. Toko A menjualnya seharga <strong>Rp 60.000</strong> dengan diskon <strong>Rp 10.000</strong>. Toko B menjual tas yang sama seharga <strong>Rp 65.000</strong> dengan diskon <strong>Rp 20.000</strong>. Budi membeli di toko yang <strong>lebih murah</strong> menggunakan selembar uang <strong>Rp 100.000</strong>. Berapa uang kembalian Budi?",
+            instruksi: "Tarik uang kembalian yang Budi terima ke kotak kanan!",
+            target: 55000,
+            audioAwal: "Misi kedua. Bandingkan dulu harga akhir dari Toko A dan Toko B setelah dikurangi diskon. Toko mana yang lebih menguntungkan Budi?",
+            audioLebih: "Ups, nilainya terlalu banyak. Apakah kamu sudah memilih harga toko yang paling murah sebelum menguranginya dari seratus ribu?",
+            audioKurang: "Belum pas nih. Coba hitung kembali selisih antara seratus ribu dengan harga tas setelah dipotong diskon.",
+            audioBerhasil: "Sangat kritis! Betul sekali, Toko B lebih murah, jadi kembalian Budi 55 ribu. Tuliskan alasanmu ya."
+        },
+        {
+            misi: 3,
+            teks: "Rina, Ayu, dan Doni ingin membeli kue ulang tahun seharga <strong>Rp 38.000</strong>. Mereka patungan masing-masing <strong>Rp 15.000</strong> dan menyerahkan semua uang tersebut ke kasir. Berapa total uang kembalian yang mereka terima?",
+            instruksi: "Tarik total uang kembalian dari kasir ke kotak kanan!",
+            target: 7000,
+            audioAwal: "Misi ketiga. Analisis ceritanya: ada tiga anak yang patungan. Hitung total uang mereka yang terkumpul, baru kurangi dengan harga kue.",
+            audioLebih: "Sepertinya uang yang kamu tarik kelebihan. Ingat, yang patungan ada TIGA orang. Coba hitung lagi total uang mereka.",
+            audioKurang: "Langkahmu hampir benar, tapi kembaliannya masih kurang. Periksa lagi hasil pengurangan dari total uang patungan.",
+            audioBerhasil: "Bagus sekali! Kamu pandai menganalisis, kembaliannya adalah 7 ribu rupiah. Ayo ketik alasanmu dan kirim."
+        },
+        {
+            misi: 4,
+            teks: "Kakak berbelanja menggunakan selembar uang <strong>Rp 100.000</strong> dan menerima uang kembalian sebesar <strong>Rp 15.000</strong>. Jika belanjaan Kakak terdiri dari <strong>1 buah roti</strong> (harga Rp 5.000) dan <strong>2 kotak susu yang sama mahal</strong>, berapakah harga untuk <strong>1 kotak susu</strong>?",
+            instruksi: "Tarik pecahan uang yang senilai dengan harga 1 kotak susu ke kotak kanan!",
+            target: 40000,
+            audioAwal: "Misi keempat. Ini menantang! Cari tahu dulu total harga belanjanya dengan mengurangkan kembalian, lalu pisahkan harga roti untuk mencari harga susu.",
+            audioLebih: "Terlalu besar nilainya. Jangan lupa, harga roti harus dipisahkan dulu sebelum kamu mencari harga untuk satu kotak susu.",
+            audioKurang: "Masih kurang tepat. Coba pikirkan: jika belanja dikurangi harga roti, sisanya adalah harga untuk DUA kotak susu. Lalu berapa harga SATU kotak susu?",
+            audioBerhasil: "Logika yang hebat! Harga satu kotak susu adalah 40 ribu rupiah. Pemahaman aljabarmu sangat bagus, lanjutkan!"
+        },
+        {
+            misi: 5,
+            teks: "Harga 1 buah cokelat adalah <strong>Rp 8.000</strong>. Minimarket sedang mengadakan promo <strong>'Beli 2 Gratis 1'</strong>. Ibu ingin membawa pulang <strong>3 buah cokelat</strong> dan membayar menggunakan selembar uang <strong>Rp 50.000</strong>. Berapa uang kembalian yang Ibu terima?",
+            instruksi: "Tarik uang kembalian Ibu ke kotak kanan!",
+            target: 34000,
+            audioAwal: "Misi terakhir. Hati-hati dengan kalimat promonya! Jika beli dua gratis satu, berapa buah cokelat yang sebenarnya harus dibayar Ibu?",
+            audioLebih: "Wah, uangnya berlebih. Coba ingat, Ibu membawa tiga cokelat, tapi apakah semuanya harus dibayar?",
+            audioKurang: "Masih ada yang kurang. Ayo cermati lagi harga cokelat yang harus dibayar sebelum dikurangi dari uang lima puluh ribu.",
+            audioBerhasil: "Luar biasa! Analisis promomu sangat tajam. Ibu hanya membayar dua cokelat, kembaliannya 34 ribu. Segera kirim jawabanmu!"
+        }
+    ];
+
+    let indeksSoal = 0; 
+    let total = 0;
+    let rincian = [];
+    let ujaranSuara;
+    const suaraKlik = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
+
+    // --- FITUR AUDIO & EKSPRESI DINAMIS ---
+    function ucapkan(teks, ekspresi = 'bicara') {
+        const elemenTeks = document.getElementById('teksGuru');
+        const elemenGambar = document.getElementById('imgGuru');
+        
+        elemenTeks.innerText = teks;
+        elemenTeks.style.transform = 'scale(1.05)';
+        setTimeout(() => { elemenTeks.style.transform = 'scale(1)'; }, 200);
+
+        if (ekspresi === 'awal') elemenGambar.src = imgAwal;
+        else if (ekspresi === 'bicara') elemenGambar.src = imgBicara;
+        else if (ekspresi === 'benar') elemenGambar.src = imgBenar;
+        else if (ekspresi === 'salah') elemenGambar.src = imgSalah;
+
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel(); 
+            ujaranSuara = new SpeechSynthesisUtterance(teks);
+            ujaranSuara.lang = 'id-ID'; 
+            ujaranSuara.rate = 0.9; 
+
+            ujaranSuara.onend = function() {
+                if (ekspresi === 'bicara') {
+                    elemenGambar.src = imgAwal;
+                }
+            };
+            window.speechSynthesis.speak(ujaranSuara);
+        }
+    }
+
+    function muatSoal(indeks) {
+        const soal = daftarSoal[indeks];
+        document.getElementById('nomorMisi').innerText = soal.misi;
+        document.getElementById('teksSoal').innerHTML = soal.teks;
+        document.getElementById('teksInstruksi').innerHTML = soal.instruksi;
+        resetUang(); 
+        ucapkan(soal.audioAwal, "bicara");
+    }
+
+    function tampilkanPetunjuk() { document.getElementById('modalPetunjuk').style.display = 'flex'; }
+    
+    function tutupPetunjuk() { 
+        document.getElementById('modalPetunjuk').style.display = 'none';
+        
+        if(indeksSoal === 0 && total === 0) {
+            muatSoal(indeksSoal);
+        }
+    }
+
+    // --- LOGIKA DRAG & DROP ---
+    function mulaiTarik(event) { event.dataTransfer.setData("nominalUang", event.target.getAttribute('data-nilai')); }
+    function izinkanDrop(event) { event.preventDefault(); document.getElementById("areaDrop").classList.add("drag-over"); }
+    function keluarDropTarget(event) { document.getElementById("areaDrop").classList.remove("drag-over"); }
+
+    function lepasUang(event) {
+        event.preventDefault();
+        document.getElementById("areaDrop").classList.remove("drag-over");
+        const dataUang = event.dataTransfer.getData("nominalUang");
+        if(dataUang) {
+            tambahUang(parseInt(dataUang)); 
+        }
+    }
+
+    function tambahUang(nilai) {
+        if (document.getElementById('teksSoal').innerText.includes("Klik tombol")) {
+            ucapkan("Ayo, klik tombol Petunjuk Belajar dulu di atas untuk melihat misi pertamamu!", "bicara");
+            return;
+        }
+
+        const misiSaatIni = daftarSoal[indeksSoal];
+
+        if (total + nilai > misiSaatIni.target) {
+            ucapkan(misiSaatIni.audioLebih, "salah");
+            return; 
+        }
+
+        total += nilai;
+        rincian.push("Rp " + nilai.toLocaleString('id-ID')); 
+        
+        suaraKlik.currentTime = 0; 
+        suaraKlik.play();
+        perbaruiTampilan(); 
+        
+        const totalElement = document.getElementById('teksTotalTampil');
+        totalElement.classList.remove('animasi-pop');
+        void totalElement.offsetWidth; 
+        totalElement.classList.add('animasi-pop');
+
+        if (total === misiSaatIni.target) {
+            ucapkan(misiSaatIni.audioBerhasil, "benar");
+        } else if (total > 0 && total < misiSaatIni.target) {
+            ucapkan(misiSaatIni.audioKurang, "bicara");
+        }
+    }
+
+    function resetUang() {
+        total = 0;
+        rincian = [];
+        perbaruiTampilan();
+    }
+
+    function perbaruiTampilan() {
+        document.getElementById('totalUang').innerText = total.toLocaleString('id-ID');
+        document.getElementById('rincianUang').innerText = rincian.length > 0 ? rincian.join(" + ") : "Belum ada uang";
+    }
+
+    function kirimData() {
+        const misiSaatIni = daftarSoal[indeksSoal];
+        const nama = document.getElementById('nama').value.trim();
+        const alasan = document.getElementById('alasan').value.trim();
+        
+        const kombinasiUang = `[Misi ${misiSaatIni.misi}] ` + rincian.join(" + ") + " (Total: Rp " + total.toLocaleString('id-ID') + ")";
+
+        if(total !== misiSaatIni.target) {
+             ucapkan("Tunggu, total uangmu belum sesuai dengan pemecahan masalah. Coba cek lagi perhitunganmu!", "salah");
+             return;
+        }
+        if(nama === "" || alasan === "") {
+            ucapkan("Bapak ingin tahu jalan pikiranmu! Tuliskan nama dan cara kamu menghitung di kotak yang tersedia.", "salah");
+            return;
+        }
+
+        const urlAppsScript = "https://script.google.com/macros/s/AKfycby7POEMosWXL47wnOiHmd8mYymEgjNahJuHahfBsq9wn6Lf2OqyF3NlXIBpCQE-FqaA/exec";
+
+        const btn = document.getElementById('btnKirim');
+        btn.innerText = "Mengirim...";
+        btn.disabled = true; 
+
+        const formData = new URLSearchParams();
+        formData.append('nama', nama);
+        formData.append('kombinasiUang', kombinasiUang);
+        formData.append('alasan', alasan);
+
+        fetch(urlAppsScript, { method: 'POST', body: formData, mode: 'no-cors' })
+        .then(() => {
+            ucapkan("Misi selesai dan jawaban berhasil dikirim!", "benar");
+            
+            setTimeout(() => {
+                indeksSoal++; 
+
+                if(indeksSoal < daftarSoal.length) {
+                    muatSoal(indeksSoal); 
+                    
+                    document.getElementById('alasan').value = ""; 
+                    btn.innerText = "🚀 Kirim Jawabanku!"; 
+                    btn.disabled = false;
+                } else {
+                    tampilkanLayarSelesai();
+                }
+            }, 6000); 
+        })
+        .catch(error => {
+            ucapkan("Terjadi kesalahan jaringan. Coba klik kirim lagi ya.", "salah");
+            btn.innerText = "🚀 Kirim Jawabanku!";
+            btn.disabled = false;
+        });
+    }
+
+    function tampilkanLayarSelesai() {
+        const areaMain = document.getElementById('areaKontenUtama');
+        areaMain.innerHTML = `
+            <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: rgba(246, 229, 141, 0.95); border-radius: 20px; border: 4px dashed #f1c40f; padding: 40px; backdrop-filter: blur(5px);">
+                <h1 style="color: #5f27cd; font-size: 3.5em; font-family: 'Fredoka One', cursive; margin: 0;">🎉 SELAMAT! 🎉</h1>
+                <p style="font-size: 1.5em; color: #2f3542; font-weight: bold; margin-top: 20px;">Kamu telah menaklukkan ke-5 misi HOTS pemecahan masalah uang hari ini dengan sangat cerdas!</p>
+                <p style="font-size: 1.2em; color: #57606f;">Semua caramu berhitung sudah tersimpan rapi di meja Bapak Guru.</p>
+            </div>
+        `;
+        ucapkan("Selamat! Kamu telah menaklukkan kelima misi HOTS hari ini dengan sangat cerdas. Bapak sangat bangga padamu!", "benar");
+    }
+
+    window.onload = function() {
+        ucapkan("Halo! Mari berlatih memecahkan masalah uang. Ada 5 misi HOTS hari ini. Klik tombol 'Petunjuk Belajar' di pojok kanan atas untuk memulai!", "awal");
+    };
+</script>
+
+</body>
+</html>
